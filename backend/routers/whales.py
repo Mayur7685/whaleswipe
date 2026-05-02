@@ -69,4 +69,26 @@ async def swipe_whale(
 
         await ws_manager.subscribe(whale.wallet_address, user.id)
 
+        # Create a demo paper trade immediately so portfolio shows activity
+        # In production this would come from the WebSocket when the whale actually trades
+        import json as _json
+        from models import PaperTrade
+        top_tokens = _json.loads(whale.top_tokens or "[]")
+        token_symbol = top_tokens[0]["symbol"] if top_tokens else "SOL"
+        # Use a realistic demo price
+        demo_prices = {"SOL": 145.0, "WIF": 2.1, "BONK": 0.000025, "SCAM": 0.001}
+        entry_price = demo_prices.get(token_symbol, 1.0)
+        trade = PaperTrade(
+            user_id=user.id,
+            whale_id=whale.id,
+            token_address=f"demo_{token_symbol}_{whale.id}",
+            token_symbol=token_symbol,
+            entry_price=entry_price,
+            current_price=entry_price,
+            amount_usd=100.0,
+            rug_flags=_json.dumps([]),
+        )
+        session.add(trade)
+        session.commit()
+
     return {"status": "success", "action": action}
