@@ -91,4 +91,12 @@ async def swipe_whale(
         session.add(trade)
         session.commit()
 
+        # Telegram push for the copied trade
+        await _notify(user.telegram_id,
+            f"📋 <b>Trade Copied!</b>\n"
+            f"Following <b>{whale.display_name}</b>\n"
+            f"Bought <b>{token_symbol}</b> @ ${entry_price:.4f}\n"
+            f"Size: $100 paper · Risk: SAFE ✅"
+        )
+
     return {"status": "success", "action": action}
