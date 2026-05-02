@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #080810;
+  --surface: #0f0f1a;
+  --surface2: #14142a;
+  --border: rgba(255,255,255,0.07);
+  --primary: #818cf8;
+  --primary-glow: rgba(129,140,248,0.25);
+  --green: #34d399;
+  --red: #f87171;
+  --amber: #fbbf24;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: #0a0a12;
+  color: #fff;
+  font-family: var(--font-geist), 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* Noise overlay — same trick as Bliss */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+
+.animate-float { animation: float 4s ease-in-out infinite; }

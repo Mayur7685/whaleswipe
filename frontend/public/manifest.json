@@ -1,0 +1,10 @@
+{
+  "name": "WhaleSwipe",
+  "short_name": "WhaleSwipe",
+  "description": "Copy the smart money 🐳",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a12",
+  "theme_color": "#818cf8",
+  "icons": []
+}
