@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { X, Heart, Shield, ShieldAlert, ShieldOff, TrendingUp, TrendingDown, ChevronUp } from "lucide-react";
+import { X, Heart, Shield, ShieldAlert, ShieldOff, TrendingUp, TrendingDown } from "lucide-react";
 import type { WhaleProfile } from "@/lib/api";
 import { swipeWhale } from "@/lib/api";
 
@@ -16,6 +16,31 @@ const GRADIENTS = [
   ["#0f0c29","#302b63","#24243e"],
   ["#000428","#004e92","#000428"],
 ];
+
+/** Build sparkline points from real net_worth_history or fall back to seeded fake */
+function makeSparkline(whale: WhaleProfile, width = 120, height = 32): string {
+  const history: {net_worth: number}[] = (() => {
+    try { return JSON.parse(whale.net_worth_history || "[]"); } catch { return []; }
+  })();
+
+  // Use real data if we have at least 5 points
+  const values = history.length >= 5
+    ? history.map(h => h.net_worth).filter(v => v > 0)
+    : (() => {
+        // Seeded fake fallback
+        const seed = whale.id * 137 + Math.floor(whale.win_rate * 100);
+        const rand = (i: number) => Math.sin(seed * i * 9301 + 49297) * 0.5 + 0.5;
+        const trend = whale.monthly_pnl_pct >= 0 ? 0.6 : 0.4;
+        return Array.from({ length: 12 }, (_, i) => rand(i + 1) * 0.5 + trend * 0.5);
+      })();
+
+  if (values.length < 2) return "";
+  const min = Math.min(...values), max = Math.max(...values);
+  const norm = values.map(v => (v - min) / (max - min || 1));
+  return norm.map((y, i) =>
+    `${(i / (norm.length - 1)) * width},${height - y * height * 0.85 - height * 0.075}`
+  ).join(" ");
+}
 
 function Badge({ score }: { score: number }) {
   const s = score < 30
@@ -36,12 +61,14 @@ function Card({ whale, onSwipe, isTop }: { whale: WhaleProfile; onSwipe:(d:"left
   const rotate = useTransform(x, [-220,220], [-16,16]);
   const likeOp = useTransform(x, [30,110], [0,1]);
   const nopeOp = useTransform(x, [-110,-30], [1,0]);
-  const [open, setOpen] = useState(false);
-
   const tokens: {symbol:string}[] = (() => { try { return JSON.parse(whale.top_tokens); } catch { return []; } })();
   const cols = whale.is_honeypot ? ["#1a0000","#450a0a","#7f1d1d"] : GRADIENTS[whale.id % GRADIENTS.length];
   const accent = whale.is_honeypot ? "#ff6568" : "#818cf8";
-  const emoji = whale.is_honeypot ? "🍯" : EMOJIS[whale.id % EMOJIS.length];
+  const avatarUrl = whale.is_honeypot
+    ? `https://api.dicebear.com/9.x/bottts/svg?seed=honeypot&backgroundColor=7f1d1d`
+    : `https://api.dicebear.com/9.x/bottts/svg?seed=${whale.id}&backgroundColor=${cols[1].replace('#','')}`;
+  const sparkPts = makeSparkline(whale);
+  const sparkColor = whale.monthly_pnl_pct >= 0 ? "#05df72" : "#ff6568";
 
   return (
     <motion.div
@@ -77,23 +104,29 @@ function Card({ whale, onSwipe, isTop }: { whale: WhaleProfile; onSwipe:(d:"left
           </div>
         </motion.div>
 
-        {/* Avatar */}
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", paddingTop:36 }}>
+        {/* Avatar — DiceBear — centered in upper half */}
+        <div style={{ position:"absolute", top:0, left:0, right:0, bottom:"45%", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <div style={{
-            width:96, height:96, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:44,
-            background: whale.is_honeypot ? "linear-gradient(135deg,#ef4444,#f97316)" : `hsl(${(whale.id*53)%360},50%,30%)`,
-            boxShadow:`0 0 48px ${accent}55, 0 8px 24px rgba(0,0,0,0.5)`,
-          }}>{emoji}</div>
-          <p style={{ color:"#fff", fontSize:20, fontWeight:700, marginTop:12, letterSpacing:"-0.02em" }}>{whale.display_name}</p>
-          <div style={{ marginTop:6 }}><Badge score={whale.risk_score} /></div>
+            width:100, height:100, borderRadius:"50%", overflow:"hidden",
+            background: whale.is_honeypot ? "linear-gradient(135deg,#ef4444,#f97316)" : `hsl(${(whale.id*53)%360},50%,25%)`,
+            boxShadow:`0 0 48px ${accent}66, 0 8px 32px rgba(0,0,0,0.6)`,
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={avatarUrl} alt={whale.display_name} width={100} height={100} draggable={false}
+              style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+          </div>
         </div>
 
-        {/* Bottom overlay */}
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, zIndex:20 }}>
-          <div style={{ height:80, background:"linear-gradient(to bottom, transparent, rgba(0,0,0,0.88))", pointerEvents:"none" }} />
-          <div style={{ background:"rgba(0,0,0,0.88)", padding:"0 14px 14px" }}>
-            {/* Stats */}
-            <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+        {/* Bottom overlay — covers bottom 45% */}
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, zIndex:20, top:"55%" }}>
+          <div style={{ height:40, background:"linear-gradient(to bottom, transparent, rgba(0,0,0,0.92))", pointerEvents:"none" }} />
+          <div style={{ background:"rgba(0,0,0,0.92)", padding:"0 14px 14px" }}>
+            {/* Name + badge row */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+              <h2 style={{ color:"#fff", fontSize:18, fontWeight:700, letterSpacing:"-0.02em" }}>{whale.display_name}</h2>
+              <Badge score={whale.risk_score} />
+            </div>
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
               {[
                 { label:"Win Rate", value:`${(whale.win_rate*100).toFixed(0)}%`, color:"#05df72" },
                 { label:"30d PnL", value:`${whale.monthly_pnl_pct>=0?"+":""}${whale.monthly_pnl_pct.toFixed(0)}%`, color: whale.monthly_pnl_pct>=0?"#05df72":"#ff6568" },
@@ -107,27 +140,31 @@ function Card({ whale, onSwipe, isTop }: { whale: WhaleProfile; onSwipe:(d:"left
               ))}
             </div>
 
-            {/* Bio */}
-            <button onClick={e=>{e.stopPropagation();setOpen(v=>!v);}} style={{
-              width:"100%", background:"none", border:"none", cursor:"pointer", textAlign:"left", padding:0 }}>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
-                <span style={{ color:"rgba(255,255,255,0.35)", fontSize:9, textTransform:"uppercase", letterSpacing:1 }}>About</span>
-                <ChevronUp size={12} color="rgba(255,255,255,0.3)" style={{ transform: open?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s" }} />
-              </div>
-              <AnimatePresence initial={false}>
-                {open ? (
-                  <motion.p key="full" initial={{height:0,opacity:0}} animate={{height:"auto",opacity:1}} exit={{height:0,opacity:0}}
-                    style={{ color:"rgba(255,255,255,0.6)", fontSize:12, lineHeight:1.5, fontStyle:"italic", overflow:"hidden" }}>
-                    &ldquo;{whale.ai_bio}&rdquo;
-                  </motion.p>
-                ) : (
-                  <p style={{ color:"rgba(255,255,255,0.6)", fontSize:12, lineHeight:1.5, fontStyle:"italic",
-                    overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" }}>
-                    &ldquo;{whale.ai_bio}&rdquo;
-                  </p>
-                )}
-              </AnimatePresence>
-            </button>
+            {/* Sparkline — 30d PnL trend */}
+            <div style={{ marginBottom:8, borderRadius:8, overflow:"hidden", background:"rgba(255,255,255,0.05)", padding:"4px 6px" }}>
+              <p style={{ color:"rgba(255,255,255,0.3)", fontSize:8, textTransform:"uppercase", letterSpacing:1, marginBottom:2 }}>30d trend</p>
+              <svg width="100%" height="28" viewBox={`0 0 120 32`} preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id={`sg${whale.id}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={sparkColor} stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor={sparkColor} stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                <polygon
+                  points={`0,32 ${sparkPts} 120,32`}
+                  fill={`url(#sg${whale.id})`}
+                />
+                <polyline points={sparkPts} fill="none" stroke={sparkColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+
+            {/* Bio — always visible */}
+            <div>
+              <span style={{ color:"rgba(255,255,255,0.35)", fontSize:9, textTransform:"uppercase", letterSpacing:1 }}>About</span>
+              <p style={{ color:"rgba(255,255,255,0.65)", fontSize:12, lineHeight:1.5, fontStyle:"italic", marginTop:3 }}>
+                &ldquo;{whale.ai_bio}&rdquo;
+              </p>
+            </div>
           </div>
         </div>
       </div>

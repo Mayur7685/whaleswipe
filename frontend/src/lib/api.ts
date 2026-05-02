@@ -22,9 +22,10 @@ export interface WhaleProfile {
   win_rate: number;
   monthly_pnl_pct: number;
   ai_bio: string;
-  top_tokens: string; // JSON string: [{symbol, pnl_pct}]
+  top_tokens: string;
   risk_score: number;
   is_honeypot: boolean;
+  net_worth_history: string; // JSON: [{net_worth: number}]
 }
 
 export interface PaperTrade {
