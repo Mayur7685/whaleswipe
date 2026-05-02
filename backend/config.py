@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = "dummy_key"
     ADMIN_SECRET: str = "change-me-in-production"
     DATABASE_URL: str = "sqlite:///whaleswipe.db"
+    MINI_APP_URL: str = "https://whaleswipe.vercel.app"
 
     class Config:
         env_file = ".env"

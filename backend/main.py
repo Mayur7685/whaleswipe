@@ -100,7 +100,10 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(update_prices, "interval", seconds=60)
     scheduler.add_job(ingest_new_whales, "cron", hour=2, minute=0)
     scheduler.start()
+    from bot import run_bot, stop_bot
+    await run_bot()
     yield
+    await stop_bot()
     scheduler.shutdown()
 
 app = FastAPI(title="WhaleSwipe API", lifespan=lifespan)
