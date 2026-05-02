@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     FERNET_KEY: str = "dummy_key"
     BIRDEYE_API_KEY: str = "dummy_key"
     OPENROUTER_API_KEY: str = "dummy_key"
-    DATABASE_URL: str = "sqlite:///whaleswipe.db"
+    ADMIN_SECRET: str = "change-me-in-production"
 
     class Config:
         env_file = ".env"

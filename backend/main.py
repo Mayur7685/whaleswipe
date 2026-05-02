@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 import json
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -122,11 +122,25 @@ def health_check():
     return {"status": "ok"}
 
 @app.post("/admin/ingest")
-async def manual_ingest():
-    """Manually trigger whale ingestion — for testing without waiting for 2am cron."""
-    import asyncio
+async def manual_ingest(x_admin_key: str = Header(...)):
+    if x_admin_key != settings.ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
     asyncio.create_task(ingest_new_whales())
     return {"status": "ingestion started"}
+
+@app.post("/admin/reseed")
+async def reseed(x_admin_key: str = Header(...)):
+    if x_admin_key != settings.ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from sqlmodel import delete as sql_delete
+    from models import WhaleProfile, UserSwipe, PaperTrade
+    with Session(engine) as s:
+        s.exec(sql_delete(PaperTrade))
+        s.exec(sql_delete(UserSwipe))
+        s.exec(sql_delete(WhaleProfile))
+        s.commit()
+    asyncio.create_task(ingest_new_whales())
+    return {"status": "reseed started"}
 
 # ── SSE endpoint for real-time rug events ────────────────────────────────────
 
