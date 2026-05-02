@@ -34,7 +34,7 @@ def validate_initdata(x_telegram_init_data: str = Header(...)) -> dict:
         if "auth_date" not in parsed:
             raise HTTPException(status_code=401, detail="Invalid initData: missing auth_date")
 
-        if time.time() - int(parsed["auth_date"]) > 300:  # 5-min expiry
+        if time.time() - int(parsed["auth_date"]) > 86400:  # 24-hour expiry
             raise HTTPException(status_code=401, detail="initData expired")
 
         user = json.loads(parsed.get("user", "{}"))
