@@ -39,6 +39,13 @@ async def get_wallet_pnl_summary(wallet: str):
     data = await _get("/wallet/v2/pnl/summary", {"wallet": wallet})
     return data.get("data", {})
 
+async def get_wallet_net_worth(wallet: str, count: int = 30):
+    """Fetch 30-day net worth history for sparkline."""
+    data = await _get("/wallet/v2/net-worth", {"wallet": wallet, "count": count, "type": "1d", "direction": "back"})
+    items = data.get("data", {}).get("history", [])
+    # Return oldest→newest, just the net_worth values
+    return [{"net_worth": h["net_worth"]} for h in reversed(items)]
+
 async def get_wallet_txs(wallet: str, limit=50):
     data = await _get("/defi/v3/txs", {"wallet": wallet, "limit": limit})
     return data.get("data", {}).get("items", [])

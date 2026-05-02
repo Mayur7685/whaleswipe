@@ -3,7 +3,7 @@ import json
 from database import create_db_and_tables, get_session
 from models import WhaleProfile
 from sqlmodel import select
-from services.birdeye import get_gainers_losers, get_wallet_pnl_summary
+from services.birdeye import get_gainers_losers, get_wallet_pnl_summary, get_wallet_net_worth
 from services.ai_bio import generate_bio
 
 async def seed_whales():
@@ -25,6 +25,7 @@ async def seed_whales():
         print(f"[{i+1}/10] {wallet[:20]}...")
 
         pnl = await get_wallet_pnl_summary(wallet)  # 1 call per whale
+        net_worth_history = await get_wallet_net_worth(wallet)  # 1 call per whale
         summary = pnl.get("summary", {})
         win_rate = summary.get("counts", {}).get("win_rate", 0)
         monthly_pnl = summary.get("pnl", {}).get("realized_profit_percent", 0)
@@ -42,6 +43,7 @@ async def seed_whales():
             ai_bio=bio,
             top_tokens=json.dumps([{"symbol": "SOL", "pnl_pct": 0}]),
             risk_score=10,
+            net_worth_history=json.dumps(net_worth_history),
         ))
         print(f"  ✓ win={win_rate:.2f} pnl={monthly_pnl:.0f}")
 

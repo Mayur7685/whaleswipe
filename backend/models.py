@@ -24,6 +24,7 @@ class WhaleProfile(SQLModel, table=True):
     top_tokens: str # JSON list
     risk_score: int
     is_honeypot: bool = Field(default=False)
+    net_worth_history: str = Field(default="[]")  # JSON: [{net_worth: float}, ...]
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class UserSwipe(SQLModel, table=True):
