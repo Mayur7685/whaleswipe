@@ -7,7 +7,7 @@
 ```bash
 cd /Users/mayurasodara/Desktop/eye-bird-maetra/backend
 
-# First time only — seed the DB
+# First time only — seed the DB (~25 seconds)
 venv/bin/python seed.py
 
 # Start the server
@@ -23,7 +23,7 @@ npm run dev
 
 Open http://localhost:3000
 
-> **Reseed** (if you want fresh data):
+> **Reseed** (wipe all data and start fresh):
 > ```bash
 > venv/bin/python -c "
 > from database import get_session; from models import WhaleProfile,UserSwipe,PaperTrade; from sqlmodel import delete
@@ -39,10 +39,10 @@ Open http://localhost:3000
 ```bash
 # Backend health
 curl http://localhost:8000/health
-# → {"status":"ok"}
+# → {"status":"ok","bot_token_suffix":"xxxx"}
 
 # Check whales in DB
-cd backend && venv/bin/python -c "
+venv/bin/python -c "
 from database import get_session; from models import WhaleProfile; from sqlmodel import select
 s = next(get_session())
 for w in s.exec(select(WhaleProfile)).all():
@@ -69,9 +69,17 @@ curl -X POST http://localhost:8000/auth/login \
 curl http://localhost:8000/whales/feed \
   -H "X-Telegram-Init-Data: dummy_test_data"
 # → array of WhaleProfile objects (max 10, excludes already-swiped)
+
+# Verify real sparkline data is present
+curl -s http://localhost:8000/whales/feed \
+  -H "X-Telegram-Init-Data: dummy_test_data" | python3 -c "
+import sys,json; w=json.load(sys.stdin)
+print(f'{w[0][\"display_name\"]} — sparkline points: {len(json.loads(w[0][\"net_worth_history\"]))}')
+"
+# → Whale #1000 — sparkline points: 30
 ```
 
-If returns `[]`: swipes exist from a previous session. Clear them:
+If returns `[]` — clear swipes:
 ```bash
 venv/bin/python -c "
 from database import get_session; from models import UserSwipe; from sqlmodel import delete
@@ -81,10 +89,28 @@ s=next(get_session()); s.exec(delete(UserSwipe)); s.commit(); print('cleared')
 
 ---
 
-## 4. Swipe + Honeypot Demo
+## 4. Swipe Right (creates demo trade + Telegram notification)
 
 ```bash
-# Get honeypot whale ID
+# Get a whale ID first
+curl -s http://localhost:8000/whales/feed \
+  -H "X-Telegram-Init-Data: dummy_test_data" | python3 -c "
+import sys,json; w=json.load(sys.stdin); print(f'ID={w[0][\"id\"]} name={w[0][\"display_name\"]}')
+"
+
+# Swipe LIKE (replace 1 with actual ID)
+curl -X POST "http://localhost:8000/whales/1/swipe?action=LIKE" \
+  -H "X-Telegram-Init-Data: dummy_test_data"
+# → {"status":"success","action":"LIKE"}
+# Telegram notification: 📋 Trade Copied!
+```
+
+---
+
+## 5. Honeypot Demo (the money moment)
+
+```bash
+# Get honeypot ID
 venv/bin/python -c "
 from database import get_session; from models import WhaleProfile; from sqlmodel import select
 s=next(get_session())
@@ -96,13 +122,12 @@ print(f'Honeypot ID: {h.id}')
 curl -X POST "http://localhost:8000/whales/11/swipe?action=LIKE" \
   -H "X-Telegram-Init-Data: dummy_test_data"
 # → {"status":"rejected","rug_flags":["Honeypot detected...","Creator holds 100%...",...]}
+# Telegram notification: 🚨 Rug Intercepted!
 ```
-
-Expected: SSE event fires, RugAlert toast appears in browser, Telegram notification sent.
 
 ---
 
-## 5. SSE Rug Events
+## 6. SSE Rug Events (real-time frontend alerts)
 
 ```bash
 # Open SSE stream in one terminal
@@ -112,13 +137,13 @@ curl -N "http://localhost:8000/events?user_id=1"
 curl -X POST "http://localhost:8000/whales/11/swipe?action=LIKE" \
   -H "X-Telegram-Init-Data: dummy_test_data"
 
-# First terminal should receive:
+# First terminal receives:
 # data: {"type":"rug_rejection","whale":"Honeypot Harry 🍯","token":"SCAM","flags":[...]}
 ```
 
 ---
 
-## 6. Portfolio
+## 7. Portfolio
 
 ```bash
 curl http://localhost:8000/portfolio/ \
@@ -128,22 +153,35 @@ curl http://localhost:8000/portfolio/ \
 
 ---
 
-## 7. Manual Whale Ingestion
+## 8. Admin Endpoints
 
 ```bash
-# Trigger without waiting for 2am cron
-curl -X POST http://localhost:8000/admin/ingest
+# Manually trigger whale ingestion (no 2am wait)
+curl -X POST http://localhost:8000/admin/ingest \
+  -H "X-Admin-Key: whaleswipe-admin-2026"
 # → {"status":"ingestion started"}
-# Watch backend logs for "[scheduler] ingesting new whales..."
+
+# Full reseed (clear + re-ingest)
+curl -X POST http://localhost:8000/admin/reseed \
+  -H "X-Admin-Key: whaleswipe-admin-2026"
+# → {"status":"reseed started"}
 ```
 
 ---
 
-## 8. Live PnL Update
+## 9. Bot Commands (in Telegram)
 
-The `update_prices` job runs every 60 seconds. To test immediately:
+Send these to your bot:
+- `/start` — welcome + Mini App button
+- `/portfolio` — net worth + open trades in chat
+- `/whales` — top 5 whales with stats
+
+---
+
+## 10. Live PnL Update
 
 ```bash
+# Trigger price update immediately (normally runs every 60s)
 venv/bin/python -c "
 import asyncio
 from main import update_prices
@@ -154,40 +192,15 @@ print('done')
 
 ---
 
-## 9. Reseed from Scratch
-
-```bash
-cd backend
-
-# Clear all data
-venv/bin/python -c "
-from database import get_session; from models import WhaleProfile,UserSwipe,PaperTrade; from sqlmodel import delete
-s=next(get_session()); s.exec(delete(PaperTrade)); s.exec(delete(UserSwipe)); s.exec(delete(WhaleProfile)); s.commit(); print('cleared')
-"
-
-# Reseed (~25 seconds)
-venv/bin/python seed.py
-```
-
----
-
-## 10. Anti-Rug Scorer Unit Test
+## 11. Anti-Rug Scorer Unit Test
 
 ```bash
 venv/bin/python -c "
 from services.rug_score import score_token
 
-# Should REJECT
-honeypot = {'is_honeypot': True}
-print(score_token(honeypot))  # score=100, verdict=REJECT
-
-# Should WARN
-risky = {'creator_percentage': 0.5, 'liquidity_usd': 10000}
-print(score_token(risky))  # score=55, verdict=WARN
-
-# Should be SAFE
-safe = {'creator_percentage': 0.1, 'mint_authority_disabled': True, 'liquidity_usd': 100000}
-print(score_token(safe))  # score=0, verdict=SAFE
+print(score_token({'is_honeypot': True}))           # score=100, REJECT
+print(score_token({'creator_percentage': 0.5, 'liquidity_usd': 10000}))  # WARN
+print(score_token({'creator_percentage': 0.1, 'mint_authority_disabled': True, 'liquidity_usd': 100000}))  # SAFE
 "
 ```
 
@@ -198,8 +211,9 @@ print(score_token(safe))  # score=0, verdict=SAFE
 | Symptom | Fix |
 |---|---|
 | Feed returns `[]` | Clear UserSwipe table (see §3) |
-| Bio shows error text | OpenRouter key invalid or rate-limited — check `.env` |
+| Bio shows error text | OpenRouter key invalid — check `.env` |
 | Telegram notification not arriving | Check `TELEGRAM_BOT_TOKEN` in `.env`; user must have started the bot |
-| `win=0.00 pnl=0` in seed | Birdeye PnL endpoint returned empty — wallet may have no history |
-| Backend 401 on all requests | Using wrong `X-Telegram-Init-Data` header — use `dummy_test_data` in dev |
-| Port 8000 already in use | `lsof -ti:8000 \| xargs kill` |
+| 401 inside Telegram | Bot token on Render doesn't match BotFather token |
+| `win=0.00 pnl=0` in seed | Birdeye PnL returned empty for that wallet |
+| Port 8000 in use | `lsof -ti:8000 \| xargs kill` |
+| Render 401 | Set all env vars in Render dashboard and redeploy |
