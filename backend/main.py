@@ -119,7 +119,9 @@ app.include_router(portfolio.router)
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    # Show last 4 chars of token to verify correct bot is configured
+    token = settings.TELEGRAM_BOT_TOKEN
+    return {"status": "ok", "bot_token_suffix": token[-4:] if len(token) > 4 else "not set"}
 
 @app.post("/admin/ingest")
 async def manual_ingest(x_admin_key: str = Header(...)):
