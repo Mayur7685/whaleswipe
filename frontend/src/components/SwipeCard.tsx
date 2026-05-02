@@ -104,29 +104,29 @@ function Card({ whale, onSwipe, isTop }: { whale: WhaleProfile; onSwipe:(d:"left
           </div>
         </motion.div>
 
-        {/* Avatar — DiceBear — centered in upper half */}
-        <div style={{ position:"absolute", top:0, left:0, right:0, bottom:"45%", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        {/* Avatar — DiceBear — centered in upper 40% */}
+        <div style={{ position:"absolute", top:0, left:0, right:0, bottom:"60%", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <div style={{
-            width:100, height:100, borderRadius:"50%", overflow:"hidden",
+            width:88, height:88, borderRadius:"50%", overflow:"hidden",
             background: whale.is_honeypot ? "linear-gradient(135deg,#ef4444,#f97316)" : `hsl(${(whale.id*53)%360},50%,25%)`,
             boxShadow:`0 0 48px ${accent}66, 0 8px 32px rgba(0,0,0,0.6)`,
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={avatarUrl} alt={whale.display_name} width={100} height={100} draggable={false}
+            <img src={avatarUrl} alt={whale.display_name} width={88} height={88} draggable={false}
               style={{ width:"100%", height:"100%", objectFit:"cover" }} />
           </div>
         </div>
 
-        {/* Bottom overlay — covers bottom 45% */}
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, zIndex:20, top:"55%" }}>
-          <div style={{ height:40, background:"linear-gradient(to bottom, transparent, rgba(0,0,0,0.92))", pointerEvents:"none" }} />
-          <div style={{ background:"rgba(0,0,0,0.92)", padding:"0 14px 14px" }}>
+        {/* Bottom overlay — covers bottom 60% */}
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, zIndex:20, top:"40%" }}>
+          <div style={{ height:32, background:"linear-gradient(to bottom, transparent, rgba(0,0,0,0.93))", pointerEvents:"none" }} />
+          <div style={{ background:"rgba(0,0,0,0.93)", padding:"0 12px 12px" }}>
             {/* Name + badge row */}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-              <h2 style={{ color:"#fff", fontSize:18, fontWeight:700, letterSpacing:"-0.02em" }}>{whale.display_name}</h2>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+              <h2 style={{ color:"#fff", fontSize:17, fontWeight:700, letterSpacing:"-0.02em" }}>{whale.display_name}</h2>
               <Badge score={whale.risk_score} />
             </div>
-            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+            <div style={{ display:"flex", gap:6, marginBottom:5 }}>
               {[
                 { label:"Win Rate", value:`${(whale.win_rate*100).toFixed(0)}%`, color:"#05df72" },
                 { label:"30d PnL", value:`${whale.monthly_pnl_pct>=0?"+":""}${whale.monthly_pnl_pct.toFixed(0)}%`, color: whale.monthly_pnl_pct>=0?"#05df72":"#ff6568" },
@@ -141,7 +141,7 @@ function Card({ whale, onSwipe, isTop }: { whale: WhaleProfile; onSwipe:(d:"left
             </div>
 
             {/* Sparkline — 30d PnL trend */}
-            <div style={{ marginBottom:8, borderRadius:8, overflow:"hidden", background:"rgba(255,255,255,0.05)", padding:"4px 6px" }}>
+            <div style={{ marginBottom:5, borderRadius:8, overflow:"hidden", background:"rgba(255,255,255,0.05)", padding:"4px 6px" }}>
               <p style={{ color:"rgba(255,255,255,0.3)", fontSize:8, textTransform:"uppercase", letterSpacing:1, marginBottom:2 }}>30d trend</p>
               <svg width="100%" height="28" viewBox={`0 0 120 32`} preserveAspectRatio="none">
                 <defs>
